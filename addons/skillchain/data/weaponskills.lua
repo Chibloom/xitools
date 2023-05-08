@@ -149,7 +149,7 @@ return {
     [162] = { name = 'Brainshaker', attr = { 'Reverberation' } },
     [163] = { name = 'Starlight', attr = {} },
     [164] = { name = 'Moonlight', attr = {} },
-    [165] = { name = 'Skullbreaker', attr = { 'Induration', 'Reverberation' } },  
+    [165] = { name = 'Skullbreaker', attr = { 'Induration', 'Reverberation' } },
     [166] = { name = 'True Strike', attr = { 'Detonation', 'Impaction' } },
     [167] = { name = 'Judgement', attr = { 'Impaction' } },
     [168] = { name = 'Hexa Strike', attr = { 'Fusion' } },
