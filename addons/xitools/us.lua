@@ -311,7 +311,7 @@ local function DrawName(player, showDist)
         elseif (Distance <= 12) then --12
             imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Yellow)
         elseif (Distance >= 30) then --12
-        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Orange)
+            imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Orange)
         else
             imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.White)
         end
