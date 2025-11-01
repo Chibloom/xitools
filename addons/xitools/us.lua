@@ -302,6 +302,27 @@ local function DrawName(player, showDist)
     imgui.Text(player.name)
     imgui.PopStyleColor()
 
+    if player.entity then
+        local Distance = math.sqrt(player.entity.Distance)
+        local dist = string.format('%.1fm', Distance)
+
+        if (Distance <= 7) then --7
+            imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Green)
+        elseif (Distance <= 12) then --12
+            imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Yellow)
+        elseif (Distance >= 30) then --12
+        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Orange)
+        else
+            imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.White)
+        end
+        
+        imgui.SameLine()
+        imgui.SetCursorPosX(150)--should be dynamic but...bleh
+        imgui.Text(dist)
+
+        imgui.PopStyleColor()
+    end
+
     -- we can use the top right corner for more cool stuff, but imgui doesn't do
     -- right-alignment (as far as i'm aware). again, we must do it ourselves:
     -- calculate the width of our displayed item, and offset it from the width
@@ -311,13 +332,13 @@ local function DrawName(player, showDist)
         imgui.SameLine()
         imgui.SetCursorPosX((player.windowSize[1] * Scale) - (80 + 10) * Scale)
         ui.DrawBar2(castbar:GetPercent() * 100, 100, ui.Scale({ 80, 8 }, Scale), '')
-    elseif showDist and player.entity then
+--[[     elseif showDist and player.entity then
         local dist = string.format('%.1fm', math.sqrt(player.entity.Distance))
         local width = imgui.CalcTextSize(dist) + ui.Styles.WindowPadding[1] * Scale
 
         imgui.SameLine()
         imgui.SetCursorPosX((player.windowSize[1] * Scale) - width)
-        imgui.Text(dist)
+        imgui.Text(dist) ]]
     elseif player.job ~= nil then
         local jobStr = ''
         if player.sub ~= nil then
