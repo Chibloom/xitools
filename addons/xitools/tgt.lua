@@ -6,9 +6,46 @@ local packets = require('utils/packets')
 
 local Scale = 1.0
 
+--adding buffs was a huge mistake wtf why cant i make it read dispels or blink killed
 local shared_dura = {
     BLMDot   = 120,
     Threnody = 120,
+}
+
+--https://github.com/Windower/Resources/blob/master/resources_data/buffs.lua
+local StatusID = {
+    [2]   = 'sleep', [19] = 'sleep',
+    [3]   = 'poison', [540] = 'poison',
+    [4]   = 'para', [566] = 'para',
+    [5]   = 'blind',
+    [6]   = 'silence',
+    [8]   = 'virus',
+    [9]   = 'curse', [20] = 'curse',
+    [10]  = 'stun',
+    [11]  = 'bind',
+    [12]  = 'grav', [567] = 'grav',
+    [13]  = 'slow', [565] = 'slow',
+    [33]  = 'haste', [580] = 'haste',
+    [40]  = 'protect',
+    [41]  = 'shell',
+    [36]  = 'blink', 
+    [66]  = 'shadows', [444] = 'shadows', [445] = 'shadows', [446] = 'shadows',
+    [37]  = 'stoneskin',
+    [42]  = 'regen', [539] = 'regen',
+    [43]  = 'refresh', [541] = 'refresh',
+    [128] = 'burn',
+    [129] = 'frost',
+    [130] = 'choke',
+    [131] = 'rasp',
+    [132] = 'shock',
+    [133] = 'drown',
+    [134] = 'dia',
+    [135] = 'bio',
+    [148] = 'distract',
+    [404] = 'frazzle',
+    [192] = 'requiem',
+    [194] = 'elegy',
+    [217] = 'threnody',
 }
 
 local Msg = {
@@ -422,43 +459,7 @@ local function HandleBasic(debuffs, basic)
         return
     end
 
-    --https://github.com/Windower/Resources/blob/master/resources_data/buffs.lua
-    local ResetMap = {
-        [2]   = 'sleep', [19] = 'sleep',
-        [3]   = 'poison', [540] = 'poison',
-        [4]   = 'para', [566] = 'para',
-        [5]   = 'blind',
-        [6]   = 'silence',
-        [8]   = 'virus',
-        [9]   = 'curse', [20] = 'curse',
-        [10]  = 'stun',
-        [11]  = 'bind',
-        [12]  = 'grav', [567] = 'grav',
-        [13]  = 'slow', [565] = 'slow',
-        [33]  = 'haste', [580] = 'haste',
-        [40]  = 'protect',
-        [41]  = 'shell',
-        [36]  = 'blink', 
-        [66]  = 'shadows', [444] = 'shadows', [445] = 'shadows', [446] = 'shadows',
-        [37]  = 'stoneskin',
-        [42]  = 'regen', [539] = 'regen',
-        [43]  = 'refresh', [541] = 'refresh',
-        [128] = 'burn',
-        [129] = 'frost',
-        [130] = 'choke',
-        [131] = 'rasp',
-        [132] = 'shock',
-        [133] = 'drown',
-        [134] = 'dia',
-        [135] = 'bio',
-        [148] = 'distract',
-        [404] = 'frazzle',
-        [192] = 'requiem',
-        [194] = 'elegy',
-        [217] = 'threnody',
-    }
-
-    local key = ResetMap[basic.param]
+    local key = StatusID[basic.param]
     if key then
         debuffs[basic.target][key] = 0
         if key == 'threnody' then
