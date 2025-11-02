@@ -465,7 +465,7 @@ local ActionMap = {
             type = StatusType.Drown,
             over = StatusType.Burn,
             msg = actionMessages.Debuff,
-        }
+        },
         [421] = {
             name = 'Battlefield Elegy',
             dur = 150,
