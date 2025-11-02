@@ -6,10 +6,45 @@ local packets = require('utils/packets')
 
 local Scale = 1.0
 
---adding buffs was a huge mistake wtf why cant i make it read dispels or blink killed
+--[[
+--fix enemy buffs (eithe they click off or it got dispeled)
+--the problem: the addon isnt reading enemies buffs poofing
+it can read if u dia them and they erase it off themself
+but not if they stoneskin and u dispel
+or if they blink and click it off (pvp)
+
+speakign of pvp it kinda goated for testing if u multibox
+
+--to do list
+fix the crap mentioned above
+probably add optimal range somehow (changing text prob)
+speaking of changing text, blink and shadow should use the same box
+prob not hard tho jsut look at threnody logic
+probably add invincaible perfectdodge somehwo too. that requires maping JAs tho
+maybe oenday research acitonmessages but im lazy
+
+also probably test this ingame nexttime before an upload in the case something exploded
+but it is slep time
+ ]]
+
+--cuz some servs might change it and/or merit/gear crap
 local shared_dura = {
     BLMDot   = 120,
     Threnody = 120,
+}
+
+--https://github.com/Windower/Resources/blob/master/resources_data/action_messages.lua
+local actionMessages = { --some of this is thanks to thorny's ttimers
+    Death = T{ 6, 20, 113, 406, 605, 646 },
+    Expired = T{ 64, 204, 206, 350, 351 },
+    DiaBio  = T{ 2, 252, 264  },
+    Steps = T{ 519, 520, 521, 591 }, --unused
+    Debuff = T{ 127, 203, 236, 237, 267, 268, 270, 271, 277, 278,  }, --im just merging fuck it
+    --maybe there will  be consequences but too late now man
+    
+    Buff = T{ 205, 230, 266, 280, 421 },
+    Dispel = T{ 83, 123, 341, 342, 343, 344 }, --unsure
+    ShadowsGone = T{ 14, 31, 535},
 }
 
 --https://github.com/Windower/Resources/blob/master/resources_data/buffs.lua
@@ -26,34 +61,29 @@ local StatusID = {
     [12]  = 'grav', [567] = 'grav',
     [13]  = 'slow', [565] = 'slow',
     [33]  = 'haste', [580] = 'haste',
-    [40]  = 'protect',
-    [41]  = 'shell',
+    [265] = 'flurry', [581] = 'flurry',
+    [40]  = 'protect', [41]  = 'shell',
     [36]  = 'blink', 
     [66]  = 'shadows', [444] = 'shadows', [445] = 'shadows', [446] = 'shadows',
     [37]  = 'stoneskin',
     [42]  = 'regen', [539] = 'regen',
     [43]  = 'refresh', [541] = 'refresh',
-    [128] = 'burn',
-    [129] = 'frost',
-    [130] = 'choke',
-    [131] = 'rasp',
-    [132] = 'shock',
-    [133] = 'drown',
-    [134] = 'dia',
-    [135] = 'bio',
+    [128] = 'burn', [129] = 'frost', [130] = 'choke',
+    [131] = 'rasp', [132] = 'shock', [133] = 'drown',
+    [134] = 'dia', [135] = 'bio',
     [148] = 'distract',
     [404] = 'frazzle',
     [192] = 'requiem',
     [194] = 'elegy',
     [217] = 'threnody',
-}
-
-local Msg = {
-    Steps = T{ 519, 520, 521, 591 },
-    Debuff = T{ 236, 277, 268, 271 }, --do they need to be seperated? ttimer doesnt...
-    Debuffs2 = T{ 237, 267, 278 },
-    DiaBio  = T{ 2, 264, 252 },
-    Buff = T{ 205, 230, 266, 280, },
+ 
+--[[        --fucku 2hrs mode;
+techncially buffs should be added bc fucking learcy thf2ndsp tho
+    [47] = 'manafont',
+    [49] = 'perfectdodge',
+    [50] = 'invincible',
+    [522] = 'sforzo',
+    ]]
 }
 
 local StatusType = {
@@ -101,230 +131,700 @@ local StatusType = {
     Threnody = 'threnody',
     ThrenodyEle = 'threnodyEle',
 }
-local ST = StatusType
 
 local ActionMap = {
-    [4] = {
-        [23]  = { name = 'Dia',           dur = 60,   type = ST.Dia,        over = ST.Bio, 
-                     msg  = Msg.DiaBio },
-        [24]  = { name = 'Dia II',        dur = 120,  type = ST.Dia,        over = ST.Bio, 
-                     msg  = Msg.DiaBio },
-        [25]  = { name = 'Dia III',       dur = 150,  type = ST.Dia,        over = ST.Bio, 
-                     msg  = Msg.DiaBio },
-        [33]  = { name = 'Diaga',         dur = 60,   type = ST.Dia,        over = ST.Bio, 
-                     msg  = Msg.DiaBio },
-        [34]  = { name = 'Diaga II',      dur = 120,  type = ST.Dia,        over = ST.Bio, 
-                     msg  = Msg.DiaBio },
-        [230] = { name = 'Bio',           dur = 60,   type = ST.Bio,        over = ST.Dia, 
-                     msg  = Msg.DiaBio },
-        [231] = { name = 'Bio II',        dur = 120,  type = ST.Bio,        over = ST.Dia, 
-                     msg  = Msg.DiaBio },
-        [232] = { name = 'Bio III',       dur = 150,  type = ST.Bio,        over = ST.Dia, 
-                     msg  = Msg.DiaBio },
-        [58]  = { name = 'Paralyze',      dur = 120,  type = ST.Paralyze, 
-                     msg  = Msg.Debuff },
-        [80]  = { name = 'Paralyze II',   dur = 120,  type = ST.Paralyze, 
-                     msg  = Msg.Debuff },
-        [356] = { name = 'Paralyzega',    dur = 120,  type = ST.Paralyze, 
-                     msg  = Msg.Debuff },
-        [341] = { name = 'Jubaku: Ichi',  dur = 180,  type = ST.Paralyze, 
-                     msg  = Msg.Debuffs2 },
-        [342] = { name = 'Jubaku: Ni',    dur = 300,  type = ST.Paralyze, 
-                     msg  = Msg.Debuffs2 },
-        [343] = { name = 'Jubaku: San',   dur = 420,  type = ST.Paralyze, 
-                     msg  = Msg.Debuffs2 },
-        [56]  = { name = 'Slow',          dur = 180,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [79]  = { name = 'Slow II',       dur = 180,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [357] = { name = 'Slowga',        dur = 180,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [344] = { name = 'Hojo: Ichi',    dur = 180,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [345] = { name = 'Hojo: Ni',      dur = 300,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [346] = { name = 'Hojo: San',     dur = 420,  type = ST.Slow, 
-                     msg  = Msg.Debuff },
-        [254] = { name = 'Blind',         dur = 180,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [276] = { name = 'Blind II',      dur = 180,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [361] = { name = 'Blindga',       dur = 180,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [347] = { name = 'Kurayami: Ichi',dur = 180,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [348] = { name = 'Kurayami: Ni',  dur = 300,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [349] = { name = 'Kurayami: San', dur = 420,  type = ST.Blind, 
-                     msg  = Msg.Debuff },
-        [216] = { name = 'Gravity',       dur = 120,  type = ST.Gravity, 
-                     msg  = Msg.Debuff },
-        [217] = { name = 'Gravity II',    dur = 180,  type = ST.Gravity, 
-                     msg  = Msg.Debuff },
-        [112] = { name = 'Flash',         dur = 12,   type = ST.Flash, 
-                     msg  = Msg.Debuff },
-        [59]  = { name = 'Silence',       dur = 120,  type = ST.Silence, 
-                     msg  = Msg.Debuff },
-        [359] = { name = 'Silencega',     dur = 120,  type = ST.Silence, 
-                     msg  = Msg.Debuff },
-        [253] = { name = 'Sleep',         dur = 60,   type = ST.Sleep, 
-                     msg  = Msg.Debuff },
-        [259] = { name = 'Sleep II',      dur = 90,   type = ST.Sleep, 
-                     msg  = Msg.Debuff },
-        [273] = { name = 'Sleepga',       dur = 60,   type = ST.Sleep, 
-                     msg  = Msg.Debuff },
-        [274] = { name = 'Sleepga II',    dur = 90,   type = ST.Sleep, 
-                     msg  = Msg.Debuff },
-        [463] = { name = 'Foe Lullaby',   dur = 60,   type = ST.Sleep, 
-                     msg  = Msg.Debuffs2 },
-        [376] = { name = 'Horde Lullaby', dur = 60,   type = ST.Sleep, 
-                     msg  = Msg.Debuffs2 },
-        [258] = { name = 'Bind',          dur = 60,   type = ST.Bind, 
-                     msg  = Msg.Debuff },
-        [362] = { name = 'Bindga',        dur = 60,   type = ST.Bind, 
-                     msg  = Msg.Debuff },
-        [252] = { name = 'Stun',          dur = 5,    type = ST.Stun, 
-                     msg  = Msg.Debuff },
-        [220] = { name = 'Poison',        dur = 90,   type = ST.Poison, 
-                     msg  = Msg.Debuff },
-        [221] = { name = 'Poison II',     dur = 120,  type = ST.Poison, 
-                     msg  = Msg.Debuff },
-        [225] = { name = 'Poisonga',      dur = 60,   type = ST.Poison, 
-                     msg  = Msg.Debuff },
-        [226] = { name = 'Poisonga II',   dur = 120,  type = ST.Poison, 
-                     msg  = Msg.Debuff },
-        [350] = { name = 'Dokumori: Ichi',dur = 60,   type = ST.Poison, 
-                     msg  = Msg.Debuffs2 },
-        [351] = { name = 'Dokumori: Ni',  dur = 120,  type = ST.Poison, 
-                     msg  = Msg.Debuffs2 },
-        [352] = { name = 'Dokumori: San', dur = 360,  type = ST.Poison, 
-                     msg  = Msg.Debuffs2 },
-        [239] = { name = 'Shock',         dur = shared_dura.BLMDot, type = ST.Shock, over = ST.Drown, 
-                     msg  = Msg.Debuffs2 },
-        [238] = { name = 'Rasp',          dur = shared_dura.BLMDot, type = ST.Rasp, over = ST.Shock, 
-                     msg  = Msg.Debuffs2 },
-        [237] = { name = 'Choke',         dur = shared_dura.BLMDot, type = ST.Choke, over = ST.Rasp, 
-                     msg  = Msg.Debuffs2 },
-        [236] = { name = 'Frost',         dur = shared_dura.BLMDot, type = ST.Frost, over = ST.Choke, 
-                     msg  = Msg.Debuffs2 },
-        [235] = { name = 'Burn',          dur = shared_dura.BLMDot, type = ST.Burn, over = ST.Frost, 
-                     msg  = Msg.Debuffs2 },
-        [240] = { name = 'Drown',         dur = shared_dura.BLMDot, type = ST.Drown, over = ST.Burn, 
-                     msg  = Msg.Debuffs2 },
-        [421] = { name = 'Battlefield Elegy', dur = 150, type = ST.Elegy, 
-                     msg  = Msg.Debuffs2 },
-        [422] = { name = 'Carnage Elegy',     dur = 250, type = ST.Elegy, 
-                     msg  = Msg.Debuffs2 },
-        [423] = { name = 'Massacre Elegy',    dur = 350, type = ST.Elegy, 
-                     msg  = Msg.Debuffs2 },
-        [368] = { name = 'Foe Requiem',       dur = 100, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [369] = { name = 'Foe Requiem II',    dur = 150, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [370] = { name = 'Foe Requiem III',   dur = 200, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [371] = { name = 'Foe Requiem IV',    dur = 250, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [372] = { name = 'Foe Requiem V',     dur = 300, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [373] = { name = 'Foe Requiem VI',    dur = 350, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [374] = { name = 'Foe Requiem VII',   dur = 400, type = ST.Requiem, 
-                     msg  = Msg.Debuffs2 },
-        [454] = { name = 'Fire Threnody',      dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'fire' },
-        [455] = { name = 'Ice Threnody',       dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'ice' },
-        [456] = { name = 'Wind Threnody',      dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'wind' },
-        [457] = { name = 'Earth Threnody',     dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'earth' },
-        [458] = { name = 'Lightning Threnody', dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'lightning' },
-        [459] = { name = 'Water Threnody',     dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'water' },
-        [460] = { name = 'Light Threnody',     dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'light' },
-        [461] = { name = 'Dark Threnody',      dur = shared_dura.Threnody, type = ST.Threnody, 
-                     msg  = Msg.Debuffs2, ele = 'dark' },
-        [43]  = { name = 'Protect',       dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [44]  = { name = 'Protect II',    dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [45]  = { name = 'Protect III',   dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [46]  = { name = 'Protect IV',    dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [47]  = { name = 'Protect V',     dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [125] = { name = 'Protectra',     dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [126] = { name = 'Protectra II',  dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [127] = { name = 'Protectra III', dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [128] = { name = 'Protectra IV',  dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [129] = { name = 'Protectra V',   dur = 900,  type = ST.Protect, 
-                     msg  = Msg.Buff },
-        [48]  = { name = 'Shell',         dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [49]  = { name = 'Shell II',      dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [50]  = { name = 'Shell III',     dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [51]  = { name = 'Shell IV',      dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [52]  = { name = 'Shell V',       dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [130] = { name = 'Shellra',       dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [131] = { name = 'Shellra II',    dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [132] = { name = 'Shellra III',   dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [133] = { name = 'Shellra IV',    dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [134] = { name = 'Shellra V',     dur = 900,  type = ST.Shell, 
-                     msg  = Msg.Buff },
-        [54]  = { name = 'Stoneskin',     dur = 300,  type = ST.Stoneskin, 
-                     msg  = Msg.Buff },
-        [53]  = { name = 'Blink',         dur = 300,  type = ST.Blink,   over = ST.Shadows,
-                     msg  = Msg.Buff },     
-        [338] = { name = 'Utsusemi: Ichi',dur = 900,  type = ST.Shadows, over = ST.Blink,
-                     msg  = Msg.Buff },
-        [339] = { name = 'Utsusemi: Ni',  dur = 900,  type = ST.Shadows, over = ST.Blink,
-                     msg  = Msg.Buff },
-        [340] = { name = 'Utsusemi: San', dur = 900,  type = ST.Shadows, over = ST.Blink,
-                     msg  = Msg.Buff },
-        [841] = { name = 'Distract',      dur = 300,  type = ST.Distract, 
-                     msg  = Msg.Debuff },
-        [842] = { name = 'Distract II',   dur = 300,  type = ST.Distract, 
-                     msg  = Msg.Debuff },
-        [882] = { name = 'Distract III',  dur = 300,  type = ST.Distract, 
-                     msg  = Msg.Debuff },
-        [843] = { name = 'Frazzle',       dur = 300,  type = ST.Frazzle, 
-                     msg  = Msg.Debuff },
-        [844] = { name = 'Frazzle II',    dur = 300,  type = ST.Frazzle, 
-                     msg  = Msg.Debuff },
-        [883] = { name = 'Frazzle III',   dur = 300,  type = ST.Frazzle, 
-                     msg  = Msg.Debuff },
+    [  4] = {
+        [ 23] = {
+            name = 'Dia',
+            dur = 60,
+            type = StatusType.Dia,
+            over = StatusType.Bio,
+            msg = actionMessages.DiaBio,
+        },
+        [ 24] = {
+            name = 'Dia II',
+            dur = 120,
+            type = StatusType.Dia,
+            over = StatusType.Bio,
+            msg = actionMessages.DiaBio,
+        },
+        [ 25] = {
+            name = 'Dia III',
+            dur = 150,
+            type = StatusType.Dia,
+            over = StatusType.Bio,
+            msg = actionMessages.DiaBio,
+        },
+        [ 33] = {
+            name = 'Diaga',
+            dur = 60,
+            type = StatusType.Dia,
+            over = StatusType.Bio,
+            msg = actionMessages.DiaBio,
+        },
+        [ 34] = {
+            name = 'Diaga II',
+            dur = 120,
+            type = StatusType.Dia,
+            over = StatusType.Bio,
+            msg = actionMessages.DiaBio,
+        },
+        [230] = {
+            name = 'Bio',
+            dur = 60,
+            type = StatusType.Bio,
+            over = StatusType.Dia,
+            msg = actionMessages.DiaBio,
+        },
+        [231] = {
+            name = 'Bio II',
+            dur = 120,
+            type = StatusType.Bio,
+            over = StatusType.Dia,
+            msg = actionMessages.DiaBio,
+        },
+        [232] = {
+            name = 'Bio III',
+            dur = 150,
+            type = StatusType.Bio,
+            over = StatusType.Dia,
+            msg = actionMessages.DiaBio,
+        },
+        [ 58] = {
+            name = 'Paralyze',
+            dur = 120,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [ 80] = {
+            name = 'Paralyze II',
+            dur = 120,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [356] = {
+            name = 'Paralyzega',
+            dur = 120,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [341] = {
+            name = 'Jubaku: Ichi',
+            dur = 180,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [342] = {
+            name = 'Jubaku: Ni',
+            dur = 300,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [343] = {
+            name = 'Jubaku: San',
+            dur = 420,
+            type = StatusType.Paralyze,
+            msg = actionMessages.Debuff,
+        },
+        [ 56] = {
+            name = 'Slow',
+            dur = 180,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [ 79] = {
+            name = 'Slow II',
+            dur = 180,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [357] = {
+            name = 'Slowga',
+            dur = 180,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [344] = {
+            name = 'Hojo: Ichi',
+            dur = 180,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [345] = {
+            name = 'Hojo: Ni',
+            dur = 300,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [346] = {
+            name = 'Hojo: San',
+            dur = 420,
+            type = StatusType.Slow,
+            msg = actionMessages.Debuff,
+        },
+        [254] = {
+            name = 'Blind',
+            dur = 180,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [276] = {
+            name = 'Blind II',
+            dur = 180,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [361] = {
+            name = 'Blindga',
+            dur = 180,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [347] = {
+            name = 'Kurayami: Ichi',
+            dur = 180,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [348] = {
+            name = 'Kurayami: Ni',
+            dur = 300,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [349] = {
+            name = 'Kurayami: San',
+            dur = 420,
+            type = StatusType.Blind,
+            msg = actionMessages.Debuff,
+        },
+        [216] = {
+            name = 'Gravity',
+            dur = 120,
+            type = StatusType.Gravity,
+            msg = actionMessages.Debuff,
+        },
+        [217] = {
+            name = 'Gravity II',
+            dur = 180,
+            type = StatusType.Gravity,
+            msg = actionMessages.Debuff,
+        },
+        [112] = {
+            name = 'Flash',
+            dur = 12,
+            type = StatusType.Flash,
+            msg = actionMessages.Debuff,
+        },
+        [ 59] = {
+            name = 'Silence',
+            dur = 120,
+            type = StatusType.Silence,
+            msg = actionMessages.Debuff,
+        },
+        [359] = {
+            name = 'Silencega',
+            dur = 120,
+            type = StatusType.Silence,
+            msg = actionMessages.Debuff,
+        },
+        [253] = {
+            name = 'Sleep',
+            dur = 60,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [259] = {
+            name = 'Sleep II',
+            dur = 90,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [273] = {
+            name = 'Sleepga',
+            dur = 60,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [274] = {
+            name = 'Sleepga II',
+            dur = 90,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [463] = {
+            name = 'Foe Lullaby',
+            dur = 60,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [376] = {
+            name = 'Horde Lullaby',
+            dur = 60,
+            type = StatusType.Sleep,
+            msg = actionMessages.Debuff,
+        },
+        [258] = {
+            name = 'Bind',
+            dur = 60,
+            type = StatusType.Bind,
+            msg = actionMessages.Debuff,
+        },
+        [362] = {
+            name = 'Bindga',
+            dur = 60,
+            type = StatusType.Bind,
+            msg = actionMessages.Debuff,
+        },
+        [252] = {
+            name = 'Stun',
+            dur = 5,
+            type = StatusType.Stun,
+            msg = actionMessages.Debuff,
+        },
+        [220] = {
+            name = 'Poison',
+            dur = 90,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [221] = {
+            name = 'Poison II',
+            dur = 120,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [225] = {
+            name = 'Poisonga',
+            dur = 60,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [226] = {
+            name = 'Poisonga II',
+            dur = 120,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [350] = {
+            name = 'Dokumori: Ichi',
+            dur = 60,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [351] = {
+            name = 'Dokumori: Ni',
+            dur = 120,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [352] = {
+            name = 'Dokumori: San',
+            dur = 360,
+            type = StatusType.Poison,
+            msg = actionMessages.Debuff,
+        },
+        [239] = {
+            name = 'Shock',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Shock,
+            over = StatusType.Drown,
+            msg = actionMessages.Debuff,
+        },
+        [238] = {
+            name = 'Rasp',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Rasp,
+            over = StatusType.Shock,
+            msg = actionMessages.Debuff,
+        },
+        [237] = {
+            name = 'Choke',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Choke,
+            over = StatusType.Rasp,
+            msg = actionMessages.Debuff,
+        },
+        [236] = {
+            name = 'Frost',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Frost,
+            over = StatusType.Choke,
+            msg = actionMessages.Debuff,
+        },
+        [235] = {
+            name = 'Burn',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Burn,
+            over = StatusType.Frost,
+            msg = actionMessages.Debuff,
+        },
+        [240] = {
+            name = 'Drown',
+            dur = shared_dura.BLMDot,
+            type = StatusType.Drown,
+            over = StatusType.Burn,
+            msg = actionMessages.Debuff,
+        }
+        [421] = {
+            name = 'Battlefield Elegy',
+            dur = 150,
+            type = StatusType.Elegy,
+            msg = actionMessages.Debuff,
+        },
+        [422] = {
+            name = 'Carnage Elegy',
+            dur = 250,
+            type = StatusType.Elegy,
+            msg = actionMessages.Debuff,
+        },
+        [423] = {
+            name = 'Massacre Elegy',
+            dur = 350,
+            type = StatusType.Elegy,
+            msg = actionMessages.Debuff,
+        },
+        [368] = {
+            name = 'Foe Requiem',
+            dur = 100,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [369] = {
+            name = 'Foe Requiem II',
+            dur = 150,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [370] = {
+            name = 'Foe Requiem III',
+            dur = 200,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [371] = {
+            name = 'Foe Requiem IV',
+            dur = 250,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [372] = {
+            name = 'Foe Requiem V',
+            dur = 300,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [373] = {
+            name = 'Foe Requiem VI',
+            dur = 350,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [374] = {
+            name = 'Foe Requiem VII',
+            dur = 400,
+            type = StatusType.Requiem,
+            msg = actionMessages.Debuff,
+        },
+        [454] = {
+            name = 'Fire Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'fire',
+        },
+        [455] = {
+            name = 'Ice Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'ice',
+        },
+        [456] = {
+            name = 'Wind Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'wind',
+        },
+        [457] = {
+            name = 'Earth Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'earth',
+        },
+        [458] = {
+            name = 'Lightning Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'lightning',
+        },
+        [459] = {
+            name = 'Water Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'water',
+        },
+        [460] = {
+            name = 'Light Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'light',
+        },
+        [461] = {
+            name = 'Dark Threnody',
+            dur = shared_dura.Threnody,
+            type = StatusType.Threnody,
+            msg = actionMessages.Debuff,
+            ele = 'dark',
+        },
+        [ 43] = {
+            name = 'Protect',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [ 44] = {
+            name = 'Protect II',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [ 45] = {
+            name = 'Protect III',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [ 46] = {
+            name = 'Protect IV',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [ 47] = {
+            name = 'Protect V',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [125] = {
+            name = 'Protectra',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [126] = {
+            name = 'Protectra II',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [127] = {
+            name = 'Protectra III',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [128] = {
+            name = 'Protectra IV',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [129] = {
+            name = 'Protectra V',
+            dur = 900,
+            type = StatusType.Protect,
+            msg = actionMessages.Buff,
+        },
+        [ 48] = {
+            name = 'Shell',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [ 49] = {
+            name = 'Shell II',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [ 50] = {
+            name = 'Shell III',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [ 51] = {
+            name = 'Shell IV',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [ 52] = {
+            name = 'Shell V',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [130] = {
+            name = 'Shellra',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [131] = {
+            name = 'Shellra II',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [132] = {
+            name = 'Shellra III',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [133] = {
+            name = 'Shellra IV',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [134] = {
+            name = 'Shellra V',
+            dur = 900,
+            type = StatusType.Shell,
+            msg = actionMessages.Buff,
+        },
+        [ 54] = {
+            name = 'Stoneskin',
+            dur = 300,
+            type = StatusType.Stoneskin,
+            msg = actionMessages.Buff,
+        },
+        [ 53] = {
+            name = 'Blink',
+            dur = 300,
+            type = StatusType.Blink,
+            over = StatusType.Shadows,
+            msg = actionMessages.Buff,
+        },
+        [338] = {
+            name = 'Utsusemi: Ichi',
+            dur = 900,
+            type = StatusType.Shadows,
+            over = StatusType.Blink,
+            msg = actionMessages.Buff,
+        },
+        [339] = {
+            name = 'Utsusemi: Ni',
+            dur = 900,
+            type = StatusType.Shadows,
+            over = StatusType.Blink,
+            msg = actionMessages.Buff,
+        },
+        [340] = {
+            name = 'Utsusemi: San',
+            dur = 900,
+            type = StatusType.Shadows,
+            over = StatusType.Blink,
+            msg = actionMessages.Buff,
+        },
+        [ 57] = {
+            name = 'Haste',
+            dur = 180,
+            type = StatusType.Haste,
+            over = StatusType.Flurry,
+            msg = actionMessages.Buff,
+        },
+        [358] = {
+            name = 'Hastega',
+            dur = 180,
+            type = StatusType.Haste,
+            over = StatusType.Flurry,
+            msg = actionMessages.Buff,
+        },
+        [511] = {
+            name = 'Haste II',
+            dur = 180,
+            type = StatusType.Haste,
+            over = StatusType.Flurry,
+            msg = actionMessages.Buff,
+        },
+        [841] = {
+            name = 'Distract',
+            dur = 300,
+            type = StatusType.Distract,
+            msg = actionMessages.Debuff,
+        },
+        [842] = {
+            name = 'Distract II',
+            dur = 300,
+            type = StatusType.Distract,
+            msg = actionMessages.Debuff,
+        },
+        [882] = {
+            name = 'Distract III',
+            dur = 300,
+            type = StatusType.Distract,
+            msg = actionMessages.Debuff,
+        },
+        [843] = {
+            name = 'Frazzle',
+            dur = 300,
+            type = StatusType.Frazzle,
+            msg = actionMessages.Debuff,
+        },
+        [844] = {
+            name = 'Frazzle II',
+            dur = 300,
+            type = StatusType.Frazzle,
+            msg = actionMessages.Debuff,
+        },
+        [883] = {
+            name = 'Frazzle III',
+            dur = 300,
+            type = StatusType.Frazzle,
+            msg = actionMessages.Debuff,
+        },
     },
-    [14] =  { --jas effects? dnc steps might be too much for me...
-
-        [205] = { name = 'Desperate Flourish',   dur = 120,  type = ST.Gravity, 
-                msg  = T{127} }, --yeah, ok wtf
-                --"${actor} uses ${ability}.${lb}${target} is ${status}.",
-        [207] = { name = 'Violent Flourish',     dur = 5,    type = ST.Stun, 
-                msg  = T{522} },
-                --"${actor} uses ${ability}.${lb}${target} takes ${number} points of damage and is stunned."
-        [168] = { name = 'Blade Bash',           dur = 5,    type = ST.Stun, 
-                msg  = T{522} }, --gee i sure hope this works
-        [46] = { name = 'Shield Bash',          dur = 5,    type = ST.Stun, 
-                msg  = T{522} }, --gee i sure hope this works
-        [77] = { name = 'Weapon Bash',          dur = 5,    type = ST.Stun, 
-                msg  = T{522} }, --gee i sure hope this works
-                
+    [ 14] =  { --jas effects? dnc steps might be too much for me...
+        [205] = {
+            name = 'Desperate Flourish',
+            dur = 120,
+            type = StatusType.Gravity,
+            msg  = T{127},
+        },
+        [207] = {
+            name = 'Violent Flourish',
+            dur = 5,
+            type = StatusType.Stun,
+            msg  = T{522}, --ngl i have no clue if this varies
+        },
+        [168] = {
+            name = 'Blade Bash',
+            dur = 5,
+            type = StatusType.Stun,
+            msg  = T{522}, --didnt test
+        },
+        [ 46] = {
+            name = 'Shield Bash',
+            dur = 5,
+            type = StatusType.Stun,
+            msg  = T{522}, --didnt test
+        },
+        [ 77] = {
+            name = 'Weapon Bash',
+            dur = 5,
+            type = StatusType.Stun,
+            msg  = T{522}, --didnt test
+        },
     },
     --god i dont want to think about avatars
     --i dont play blu yet sry
@@ -451,13 +951,28 @@ end
 ---@param debuffs table
 ---@param basic table
 local function HandleBasic(debuffs, basic)
-    if basic.message == 6 and debuffs[basic.target] then
-        -- mob died, reset its status
+
+    --if no mob
+    if debuffs[basic.target] == nil then 
+        return
+    -- if we're tracking a mob that dies, reset its status
+    elseif actionMessages.Death:contains(basic.message) then
         debuffs[basic.target] = nil
         return
-    elseif basic.message ~= 206 or debuffs[basic.target] == nil then
+        --this doesnt actully work when u bonk someones shadows off yet
+    elseif (actionMessages.ShadowsGone:contains(basic.message)) then
+        debuffs[basic.target].shadows = 0
+        debuffs[basic.target].blink = 0
+    elseif (not actionMessages.Expired:contains(basic.message)) and 
+                (not actionMessages.Dispel:contains(basic.message)) then
         return
     end
+
+    --this was the orginal
+    --[[
+    if basic.param == 2 or basic.param == 19 then
+            debuffs[basic.target].sleep = 0
+    elseif [...] ]]
 
     local key = StatusID[basic.param]
     if key then
@@ -468,7 +983,6 @@ local function HandleBasic(debuffs, basic)
     end
 end
 
-
 ---@param name     string
 ---@param distance number
 ---@param options  table
@@ -478,9 +992,23 @@ local function DrawHeader(name, distance, options)
     local dist = string.format('%.1fm', distance)
     local width = imgui.CalcTextSize(dist) + ui.Styles.WindowPadding[1] * Scale
 
+    --i should change this include the other ranges but brain hurtie
+    --https://www.bg-wiki.com/ffxi/Distance_Correction
+    if (distance <= 6.5) then --gun
+        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Green)
+    elseif (distance <= 12) then --longbow
+        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Yellow)
+    elseif (distance >= 30) then
+        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.Orange)
+    else
+        imgui.PushStyleColor(ImGuiCol_Text, ui.Colors.White)
+    end
+
     imgui.SameLine()
     imgui.SetCursorPosX(options.size[1] * Scale - width)
     imgui.Text(dist)
+
+    imgui.PopStyleColor()
 end
 
 ---@param hpPercent integer
@@ -537,27 +1065,28 @@ local function DrawStatus(debuffs)
     DrawStatusEntry('Blink',  now < debuffs.blink, ui.Colors.StatusGreen)
     DrawSeparator()
     DrawStatusEntry('Shadows',  now < debuffs.shadows, ui.Colors.StatusGreen)
+    DrawSeparator()
+    DrawStatusEntry('Haste',  now < debuffs.haste, ui.Colors.StatusRed)
     imgui.NewLine()
     DrawStatusEntry('D',  now < debuffs.dia, ui.Colors.StatusWhite)
     DrawStatusEntry('B',  now < debuffs.bio, ui.Colors.StatusBlack)
     DrawSeparator()
-    DrawSeparator()
     DrawStatusEntry('P',  now < debuffs.para, ui.Colors.StatusWhite)
     DrawStatusEntry('S',  now < debuffs.slow, ui.Colors.StatusWhite)
     DrawStatusEntry('E',  now < debuffs.elegy, ui.Colors.StatusBrown)
-    DrawStatusEntry('G',  now < debuffs.grav, ui.Colors.StatusBlack)
     DrawStatusEntry('B',  now < debuffs.blind, ui.Colors.StatusBlack)
     DrawStatusEntry('F',  now < debuffs.flash, ui.Colors.StatusWhite)
     DrawSeparator()
-    DrawSeparator()
-    DrawStatusEntry('Si', now < debuffs.silence, ui.Colors.StatusWhite)
-    DrawSeparator()
-    DrawStatusEntry('Sl', now < debuffs.sleep, ui.Colors.StatusBlack)
-    DrawSeparator()
-    DrawStatusEntry('Bi', now < debuffs.bind, ui.Colors.StatusBlack)
-    DrawSeparator()
     DrawStatusEntry('Di', now < debuffs.distract, ui.Colors.StatusWhite)
     DrawStatusEntry('Fr', now < debuffs.frazzle, ui.Colors.StatusWhite)
+    DrawSeparator()
+    DrawStatusEntry('Sil', now < debuffs.silence, ui.Colors.StatusWhite)
+    DrawSeparator()
+    DrawStatusEntry('Grav',  now < debuffs.grav, ui.Colors.StatusBlack)
+    DrawSeparator()
+    DrawStatusEntry('slep', now < debuffs.sleep, ui.Colors.StatusBlack)
+    DrawSeparator()
+    DrawStatusEntry('Bi', now < debuffs.bind, ui.Colors.StatusBlack)
     DrawSeparator()
     DrawStatusEntry('Stun', now < debuffs.stun, ui.Colors.StatusYellow)
     imgui.NewLine()
